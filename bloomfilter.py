@@ -223,7 +223,7 @@ def plot_fpr(n, N, c, k_values, tests, plot):
 
     plot.set_xlabel("k (# of Hash Functions)")                                              # x-axis label
     plot.set_ylabel("False Positve Rates")                                                  # y-axis label
-    plot.set_title(f"False Positive Rate vs k")                                             # title
+    plot.set_title(f"False Positive Rate vs k (c={c})")                                     # title
     plot.grid(True)                                                                         # enable grid lines
 
 '''
