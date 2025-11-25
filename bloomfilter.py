@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # ------------------------------------------------------------------------------------------------------
 
 p = (2**31 - 1)             # mersenne prime >= N
-N = 10**6                   # size of universe , |U|
+N = 10**9                   # size of universe , |U|
 k_1 = 7                     # number of hash functions for par t1
 c_1 = 10                    # c value for part 1
 m_1 = 10000                 # size of hash table for part 1
@@ -67,6 +67,8 @@ def hash_table(data, hash_type, m):
 
 
 '''
+uncomment this section to run part 1 tests and plots
+
 # define two kinds of datasets (data types)
 random_data = [rng.randrange(N) for _ in range(5 * m_1)]                   # random data from 0 to N
 correlated_data = [2*n for n in range(5 * m_1)]                            # 0, 2, 4, ..., 20*m
@@ -175,79 +177,61 @@ def false_positve_rate(n, N, c, k, hash_type):
 
 # plots median value from 10 test runs for of each k-value for a given c value
 def plot_fpr(n, N, c, k_values, tests, plot):
-    m = c * n                                                   # size of hash table
-    hash1_fprs = []                                             # array of false positive rates for each c value
-    hash2_fprs = []                                             # array of false positive rates for each c value
+    m = c * n                                                                           # size of hash table
+    hash_types = [1, 2]                                                                 # hash types to test
+    fprs = {}                                                                           # dictionary to store fpr results
 
-    for k in range(k_values):                               
-        hash1_test_results = []                                             # store each test run result from hash1 and hash2 separately
-        hash2_test_results = []
-        for test in range(tests):
-            hash1_test_results.append(false_positve_rate(n, N, c, k, 1))    # run false positive rate test for hash1 and hash2
-            hash2_test_results.append(false_positve_rate(n, N, c, k, 2))
-        hash1_test_median = sorted(hash1_test_results)[tests // 2]          # find the median of the test results for hash1 and hash2
-        hash2_test_median = sorted(hash2_test_results)[tests // 2]
-        hash1_fprs.append(hash1_test_median)                                # use the median of the tests as the fpr for that c and k value pair for both hash functions
-        hash2_fprs.append(hash2_test_median)                               
+    for hash in hash_types:                                                     
+        fprs[hash] = []                                                                 # initialize empty list for each hash type
+        for k in range(k_values):
+            test_reults = [false_positve_rate(n, N, c, k, hash) for _ in range(tests)]  # run tests for each k value
+            median_fpr = sorted(test_reults)[tests // 2]                                # find median
+            fprs[hash].append(median_fpr)                                               # store median fpr for that k value
 
+    ideal_rate = [(1 - math.exp(-k/c))**k for k in range(1, k_values + 1)]              # ideal false positive rate formula
 
-    ideal_rate = [(1 - math.exp(-k/c))**k for k in range(1, k_values + 1)]                          # ideal false positive rate formula
+    # plotting figure, start from 2 because at 1 the fpr jumps very high
+    for hash, color in zip(hash_types, ['blue', 'orange']):
+        plot.plot(range(2, k_values + 1), fprs[hash][1:], marker="x", color=color, label=f"c={c}, hash{hash}")      # plots simulated fpr
+        min_idx = fprs[hash][1:].index(min(fprs[hash][1:])) + 2                                                     # find min indices and values
+        min_val = min(fprs[hash][1:])                                                                               # +2 is to match x-axis (k=2 start)
+        plot.scatter(min_idx, min_val, color=color, s=100, zorder=5, label=f'k={min_idx} hash{hash}')               # plot min points
 
-    # plotting figure, start from 2 because at 1 the fpr jumps very high    
-    plot.plot(range(2, k_values + 1), hash1_fprs[1:], marker="x", label=f"c={c}, hash1")            # plots hash1 simulated fpr
-    plot.plot(range(2, k_values + 1), hash2_fprs[1:], marker="x", label=f"c={c}, hash2")            # plots hash2 simulated fpr
-    plot.plot(range(2, k_values + 1), ideal_rate[1:], marker="x", label=f"c_ideal={c}")             # plots ideal fpr
+    plot.plot(range(2, k_values + 1), ideal_rate[1:], marker="x", label=f"c_ideal={c}")                             # repeat stepes for ideal fpr
+    ideal_min_idx = ideal_rate[1:].index(min(ideal_rate[1:])) + 2                                                                
+    ideal_min_val = min(ideal_rate[1:])                                                                             
+    plot.scatter(ideal_min_idx, ideal_min_val, color='green', s=100, zorder=5, label=f'k={ideal_min_idx} ideal')    
 
-    hash1_min_idx = hash1_fprs[1:].index(min(hash1_fprs[1:])) + 2                                   # find min indices and values
-    hash1_min_val = min(hash1_fprs[1:])                                                             # +2 is to match x-axis (k=2 start)
-
-    hash2_min_idx = hash2_fprs[1:].index(min(hash2_fprs[1:])) + 2                                   # repeat for hash2
-    hash2_min_val = min(hash2_fprs[1:])
-
-    ideal_min_idx = ideal_rate[1:].index(min(ideal_rate[1:])) + 2                                   # repeat for ideal              
-    ideal_min_val = min(ideal_rate[1:])
-
-    plot.scatter(hash1_min_idx, hash1_min_val, color='blue', s=75, zorder=5, label='min hash1')     # plot min points
-    plot.scatter(hash2_min_idx, hash2_min_val, color='orange', s=75, zorder=5, label='min hash2')
-    plot.scatter(ideal_min_idx, ideal_min_val, color='green', s=75, zorder=5, label='min ideal')
-
-    plot.set_xlabel("k (# of Hash Functions)")                                                      # x-axis label
-    plot.set_ylabel("False Positve Rates")                                                          # y-axis label
-    plot.set_title(f"False Positive Rate vs k (c={c})")                                             # title
-    plot.grid(True)                                                                                 # enable grid lines
+    plot.set_xlabel("k (# of Hash Functions)")                                          # x-axis label
+    plot.set_ylabel("False Positve Rates")                                              # y-axis label
+    plot.set_title(f"False Positive Rate vs k (c={c})")                                 # title
+    plot.grid(True)                                                                     # enable grid lines
 
 
 # parameters for plotting all the k and c value pairings
-k_values = 15                      # number of hash functions we will test for each hash type and c_value
-n = 10000                          # size of subset S
-tests = 10                         # number of tests ran for each pair of k_value and c_value
-c_values = [5, 7, 9, 11]           # different c values to test
-hash_types = [1, 2]                # different hash functions, hash1 and hash2 implemented in part 1
+k = 30                                              # number of hash functions we will test for each hash type and c_value
+n = 10000                                           # size of subset S
+tests = 10                                          # number of tests ran for each pair of k_value and c_value
+c_values = [5, 7, 9, 11]                            # different c values to test
+hash_types = [1, 2]                                 # different hash functions, hash1 and hash2 implemented in part 1
 
-# create subplots: one for each c value, both hash types on same plot
-fig, axes = plt.subplots(2, 2, figsize=(14, 5))
-axes = axes.ravel()
+
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 5))     # create subplots: one for each c value, both hash types on same plot
+axes = axes.ravel()                                 # flatten the array of plots for easy looping
 (plot1, plot2, plot3, plot4) = axes
 
-for c in c_values:                 # run plot_fpr for each c value
-    print(f"Plot for c={c}")
-    if c == 5:
-        plot = plot1
-    elif c == 7:
-        plot = plot2
-    elif c == 9:
-        plot = plot3
-    else:
-        plot = plot4
-    plot_fpr(n, N, c, k_values, tests, plot)
+plots = [plot1, plot2, plot3, plot4]
 
-# add legends to both subplots
-plot1.legend()
+for i, c in enumerate(c_values):                    # run plot_fpr for each c value
+    print(f"Plot for c={c}")
+    plot_fpr(n, N, c, k, tests, plots[i])
+
+plot1.legend()                                      # add legends to both subplots
 plot2.legend()
 plot3.legend()
-plot4.legend()
+plot4.legend()                                  
 
-# adjust layout and show
-plt.tight_layout()
+plt.tight_layout()                                  # adjust layout and show plots
 plt.show()
 
