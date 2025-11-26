@@ -176,31 +176,30 @@ def false_positve_rate(n, N, c, k, hash_type):
 
 
 # plots median value from 10 test runs for of each k-value for a given c value
-def plot_fpr(n, N, c, k_values, tests, plot):
+def plot_fpr(n, N, c, k_optimal, tests, plot):
     m = c * n                                                                           # size of hash table
     hash_types = [1, 2]                                                                 # hash types to test
     fprs = {}                                                                           # dictionary to store fpr results
+    k_min = max(1, k_optimal - 5)                                                       # minimum k value to test, don't go below 1 beacause fpr jumps very high
+    k_range = list(range(k_min, k_optimal + 6))                                         # +/- 5 around optimal k
 
     for hash in hash_types:                                                     
         fprs[hash] = []                                                                 # initialize empty list for each hash type
-        for k in range(k_values):
+        for k in k_range:                                                               # test k values +/- 5 from optimal             
             test_reults = [false_positve_rate(n, N, c, k, hash) for _ in range(tests)]  # run tests for each k value
             median_fpr = sorted(test_reults)[tests // 2]                                # find median
             fprs[hash].append(median_fpr)                                               # store median fpr for that k value
 
-    ideal_rate = [(1 - math.exp(-k/c))**k for k in range(1, k_values + 1)]              # ideal false positive rate formula
+    ideal_rate = [(1 - math.exp(-k/c))**k for k in k_range]                             # ideal false positive rate formula
 
-    # plotting figure, start from 2 because at 1 the fpr jumps very high
-    for hash, color in zip(hash_types, ['blue', 'orange']):
-        plot.plot(range(2, k_values + 1), fprs[hash][1:], marker="x", color=color, label=f"c={c}, hash{hash}")      # plots simulated fpr
-        min_idx = fprs[hash][1:].index(min(fprs[hash][1:])) + 2                                                     # find min indices and values
-        min_val = min(fprs[hash][1:])                                                                               # +2 is to match x-axis (k=2 start)
-        plot.scatter(min_idx, min_val, color=color, s=100, zorder=5, label=f'k={min_idx} hash{hash}')               # plot min points
+    for hash, color in zip(hash_types, ['blue', 'orange']):                                                                                 # plot for each hash type with different colors                           
+        plot.plot(k_range, fprs[hash], color=color, label=f"hash{hash} Functions")                                                          # plots simulated fpr
+        min_idx = fprs[hash].index(min(fprs[hash]))                                                                                         # find min indices and values
+        plot.scatter(k_range[min_idx], min(fprs[hash]), color=color, s=100, zorder=2, label=f'k={k_range[min_idx]} hash{hash} Ideal K')     # plot min fpr points
 
-    plot.plot(range(2, k_values + 1), ideal_rate[1:], marker="x", label=f"c_ideal={c}")                             # repeat stepes for ideal fpr
-    ideal_min_idx = ideal_rate[1:].index(min(ideal_rate[1:])) + 2                                                                
-    ideal_min_val = min(ideal_rate[1:])                                                                             
-    plot.scatter(ideal_min_idx, ideal_min_val, color='green', s=100, zorder=5, label=f'k={ideal_min_idx} ideal')    
+    plot.plot(k_range, ideal_rate, color='green', label="Theoretical Function")                                                             # repeat stepes for ideal fpr
+    ideal_min_idx = ideal_rate.index(min(ideal_rate))                                                                                                                                            
+    plot.scatter(k_range[ideal_min_idx], min(ideal_rate), color='green', s=100, zorder=2, label=f'k={k_range[ideal_min_idx]} Theoretical Ideal K')
 
     plot.set_xlabel("k (# of Hash Functions)")                                          # x-axis label
     plot.set_ylabel("False Positve Rates")                                              # y-axis label
@@ -209,23 +208,23 @@ def plot_fpr(n, N, c, k_values, tests, plot):
 
 
 # parameters for plotting all the k and c value pairings
-k = 30                                              # number of hash functions we will test for each hash type and c_value
 n = 10000                                           # size of subset S
 tests = 10                                          # number of tests ran for each pair of k_value and c_value
 c_values = [5, 7, 9, 11]                            # different c values to test
 hash_types = [1, 2]                                 # different hash functions, hash1 and hash2 implemented in part 1
-
-
+k_values = []
+for c in c_values:
+    k_optimal = math.ceil(c * math.log(2))          # optimal k value for each c value
+    k_values.append(k_optimal)                      # store optimal k values for each c value
 
 fig, axes = plt.subplots(2, 2, figsize=(14, 5))     # create subplots: one for each c value, both hash types on same plot
 axes = axes.ravel()                                 # flatten the array of plots for easy looping
 (plot1, plot2, plot3, plot4) = axes
-
 plots = [plot1, plot2, plot3, plot4]
 
 for i, c in enumerate(c_values):                    # run plot_fpr for each c value
     print(f"Plot for c={c}")
-    plot_fpr(n, N, c, k, tests, plots[i])
+    plot_fpr(n, N, c, k_values[i], tests, plots[i])
 
 plot1.legend()                                      # add legends to both subplots
 plot2.legend()
